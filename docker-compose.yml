@@ -1,0 +1,48 @@
+version: "2"
+
+services:
+  server:
+    image: httpd:2.4-alpine
+    ports:
+      - 33060:80
+    volumes:
+      - ./httpd.conf:/usr/local/apache2/conf/httpd.conf
+      - ./httpd-vhosts.conf:/usr/local/apache2/conf/extra/httpd-vhosts.conf
+      - ./public:/usr/local/apache2/htdocs/
+    depends_on:
+      - php-fpm
+    links:
+      - php-fpm
+
+  php-fpm:
+    # NOTE: change it with the preferred PHP version
+    image: joseluisq/php-fpm
+    environment:
+      - "ENV_SUBSTITUTION_ENABLE=true"
+      - "PHP_MEMORY_LIMIT=512M"
+      - "PHP_SESSION_GC_MAXLIFETIME=7200"
+    volumes:
+      - ./public:/usr/local/apache2/htdocs/
+  db:
+    image: mysql:latest
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: DB1
+      MYSQL_USER: user
+      MYSQL_PASSWORD: test
+      MYSQL_ROOT_PASSWORD: test
+    volumes:
+      - /docker/mysqldb/dump:/docker-entrypoint-initdb.d
+      - /docker/mysqldb/init.sql:/var/lib/mysql
+    networks:
+      - default
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    links:
+      - db:db
+    ports:
+      - 33061:80
+    environment:
+      PMA_HOST: db
